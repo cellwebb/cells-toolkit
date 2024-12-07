@@ -10,17 +10,54 @@ It also assumes that your environment has pre-commit installed and configured.""
 
 import logging
 import subprocess
-from typing import List
+from typing import Dict, List, Optional, Union
 
+import anthropic
 import click
-import requests
 from rich.logging import RichHandler
-
-from scoutie.utils.llm import chat, count_tokens
 
 logger = logging.getLogger(__name__)
 
-MODEL = "anthropic:claude-3-5-haiku-latest"
+MODEL = "claude-3-5-haiku-latest"
+
+client = anthropic.Anthropic()
+
+
+def chat(
+    messages: List[Dict[str, str]],
+    model: str,
+    system: Optional[str] = None,
+    *args,
+    **kwargs,
+) -> str:
+    message = client.messages.create(
+        model=model,
+        max_tokens=1024,
+        messages=messages,
+        system=system,
+        *args,
+        **kwargs,
+    )
+    return message.content
+
+
+def count_tokens(messages: Union[str, List[Dict[str, str]]], model: str) -> int:
+    if isinstance(messages, str):
+        system_message = "You are a helpful assistant."
+        messages = [{"role": "user", "content": messages}]
+    elif messages[0]["role"] == "system":
+        system_message = messages[0]["content"]
+        messages = messages[1:]
+    else:
+        system_message = "You are a helpful assistant."
+
+    response = client.beta.messages.count_tokens(
+        betas=["token-counting-2024-11-01"],
+        model=model,
+        system=system_message,
+        messages=messages,
+    )
+    return response.input_tokens
 
 
 def run_subprocess(command: List[str]) -> str:
@@ -44,9 +81,7 @@ def get_staged_diff() -> str:
 
 
 def get_staged_files() -> List[str]:
-    result = subprocess.run(
-        ["git", "diff", "--staged", "--name-only"], stdout=subprocess.PIPE, text=True
-    )
+    result = subprocess.run(["git", "diff", "--staged", "--name-only"], stdout=subprocess.PIPE, text=True)
     return result.stdout.splitlines()
 
 
@@ -174,10 +209,7 @@ def main(test_mode: bool = False, force: bool = False, add_all: bool = False) ->
     if force:
         proceed = "y"
     else:
-        prompt = (
-            f"Suggested Commit Message:\n{commit_message}\n\n"
-            "Do you want to proceed with this commit? (y/n): "
-        )
+        prompt = f"Suggested Commit Message:\n{commit_message}\n\n" "Do you want to proceed with this commit? (y/n): "
         proceed = click.prompt(prompt, type=str, default="y").strip().lower()
     if not proceed or proceed[0] != "y":
         logger.info("Commit aborted.")
@@ -192,11 +224,7 @@ def main(test_mode: bool = False, force: bool = False, add_all: bool = False) ->
     if force:
         push = "y"
     else:
-        push = (
-            click.prompt("Do you want to push these changes? (y/n): ", type=str, default="y")
-            .strip()
-            .lower()
-        )
+        push = click.prompt("Do you want to push these changes? (y/n): ", type=str, default="y").strip().lower()
     if push and push[0] == "y":
         run_git_push()
     else:

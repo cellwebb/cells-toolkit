@@ -18,7 +18,6 @@ from typing import List, Tuple
 
 import click
 from rich.logging import RichHandler
-
 from scoutie.utils.llm import chat, count_tokens
 
 logger = logging.getLogger(__name__)
@@ -167,9 +166,7 @@ def extract_unreleased_section(existing_changelog: str) -> Tuple[str, int, int]:
     return None, None, None
 
 
-def update_unreleased_section(
-    latest_tag: str, diff: str, commits: List[str], existing_changelog: str
-) -> str:
+def update_unreleased_section(latest_tag: str, diff: str, commits: List[str], existing_changelog: str) -> str:
     """
     Send the diff and commits to the LLM and ask it to produce ONLY the updated `## [Unreleased]` section.
     If an Unreleased section exists, provide its current content as context.
@@ -305,9 +302,7 @@ def main(changelog_path: str, test_mode: bool = False, force: bool = False) -> N
     logger.info("")
 
     if not force:
-        response = input(
-            "Do you want to insert/update this Unreleased section in the CHANGELOG? (y/n): "
-        )
+        response = input("Do you want to insert/update this Unreleased section in the CHANGELOG? (y/n): ")
         if response.lower() != "y":
             logger.info("Aborted!")
             return
