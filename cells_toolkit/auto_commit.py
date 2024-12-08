@@ -12,52 +12,13 @@ import logging
 import subprocess
 from typing import Dict, List, Optional, Union
 
-import anthropic
 import click
 from rich.logging import RichHandler
+from utils.llm import chat, count_tokens
 
 logger = logging.getLogger(__name__)
 
-MODEL = "claude-3-5-haiku-latest"
-
-client = anthropic.Anthropic()
-
-
-def chat(
-    messages: List[Dict[str, str]],
-    model: str,
-    system: Optional[str] = None,
-    *args,
-    **kwargs,
-) -> str:
-    message = client.messages.create(
-        model=model,
-        max_tokens=1024,
-        messages=messages,
-        system=system,
-        *args,
-        **kwargs,
-    )
-    return message.content
-
-
-def count_tokens(messages: Union[str, List[Dict[str, str]]], model: str) -> int:
-    if isinstance(messages, str):
-        system_message = "You are a helpful assistant."
-        messages = [{"role": "user", "content": messages}]
-    elif messages[0]["role"] == "system":
-        system_message = messages[0]["content"]
-        messages = messages[1:]
-    else:
-        system_message = "You are a helpful assistant."
-
-    response = client.beta.messages.count_tokens(
-        betas=["token-counting-2024-11-01"],
-        model=model,
-        system=system_message,
-        messages=messages,
-    )
-    return response.input_tokens
+MODEL = "anthropic:claude-3-5-haiku-latest"
 
 
 def run_subprocess(command: List[str]) -> str:
